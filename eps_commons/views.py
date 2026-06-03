@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import os
+import tomllib
 
 import requests as http_requests
 from django.conf import settings
@@ -165,3 +166,14 @@ def logout_view(request):
     logout(request)
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     return redirect(next_url)
+
+
+def make_version_view(pyproject_path):
+    def version_view(request):
+        try:
+            with open(pyproject_path, 'rb') as f:
+                ver = tomllib.load(f).get('project', {}).get('version', 'unknown')
+        except Exception:
+            ver = 'unknown'
+        return JsonResponse({'version': ver})
+    return version_view
