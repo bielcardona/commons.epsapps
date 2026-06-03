@@ -43,12 +43,14 @@ def impersonate_list(request):
 def impersonate_user(request, username):
     if not getattr(settings, 'IMPERSONATION_ENABLED', False):
         raise Http404
+    from eps_commons.signals import user_impersonated
     User = get_user_model()
     target_user = get_object_or_404(User, username=username)
     request.session['_impersonator_id'] = request.user.pk
     request.session['_impersonated_user_id'] = target_user.pk
     grups = target_user.groups.all()
     request.session['current_rol'] = grups.first().name if grups.exists() else None
+    user_impersonated.send(sender=request.user.__class__, request=request, user=target_user)
     success_url = getattr(settings, 'IMPERSONATION_SUCCESS_URL', settings.LOGIN_REDIRECT_URL)
     return redirect(success_url)
 
