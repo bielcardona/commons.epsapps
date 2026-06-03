@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ SITE_TITLE }}{% endblock %}</title>
+
+  <link rel="icon" href="{% static 'eps_commons/favicon.ico' %}" sizes="any">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{% static 'eps_commons/eps_theme.css' %}">
+  <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if is_impersonating %}
+<div class="alert alert-warning text-center mb-0 rounded-0" style="position: sticky; top: 0; z-index: 1050;">
+  <strong>⚠️ Estàs actuant com {{ user.get_full_name|default:user.username }}</strong>
+  &nbsp;|&nbsp;
+  <a href="{% url 'stop_impersonation' %}" class="alert-link">Tornar a {{ impersonator.get_full_name|default:impersonator.username }}</a>
+</div>
+{% endif %}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <img src="{% static 'eps_commons/logo_eps_blanc.png' %}" alt="EPS" height="48">&nbsp;
+    <a class="navbar-brand" href="{% block brand_url %}{% endblock %}">{{ SITE_TITLE }}</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
+            aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav me-auto">
+        {% block navbar_links %}{% endblock %}
+      </ul>
+
+      {% block navbar_center %}{% endblock %}
+
+      <ul class="navbar-nav">
+        {% block navbar_user %}
+        {% if user.is_authenticated %}
+          {% block navbar_user_extra %}{% endblock %}
+          <div class="btn-group">
+            <a class="nav-link dropdown-toggle active text-white" href="#" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">
+              {{ professor.name|default:user.get_full_name|default:user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% if current_rol %}
+              <li><span class="dropdown-item-text text-muted small">Rol: {{ current_rol }}</span></li>
+              {% endif %}
+              {% for group in user.groups.all %}
+                {% if group.name != current_rol %}
+                <li>
+                  <a class="dropdown-item" href="{% url 'swap_rol' group.name %}?next={{ request.path }}">
+                    <i class="bi bi-arrow-left-right"></i> Canviar a {{ group.name }}
+                  </a>
+                </li>
+                {% endif %}
+              {% endfor %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form method="post" action="{% url LOGOUT_URL %}">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item">
+                    <i class="bi bi-box-arrow-right"></i> Sortir
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url LOGIN_URL %}">
+              <i class="bi bi-box-arrow-in-right"></i> Entrar
+            </a>
+          </li>
+        {% endif %}
+        {% endblock navbar_user %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4 mb-4">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert
+                  {% if message.tags == 'error' %}alert-danger
+                  {% elif message.tags == 'success' %}alert-success
+                  {% elif message.tags == 'warning' %}alert-warning
+                  {% elif message.tags == 'info' %}alert-uib
+                  {% else %}alert-secondary{% endif %}
+                  alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</div>
+
+{% block modals %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+/* EPS UIB — color corporatiu primari */
+:root {
+  --bs-primary: #005DB5;
+  --bs-primary-rgb: 0, 93, 181;
+  --bs-link-color: #005DB5;
+  --bs-link-color-rgb: 0, 93, 181;
+  --bs-link-hover-color: #00489c;
+}
+.btn-primary           { background-color: #005DB5; border-color: #005DB5; }
+.btn-primary:hover,
+.btn-primary:focus     { background-color: #00489c; border-color: #00489c; }
+.btn-outline-primary   { color: #005DB5; border-color: #005DB5; }
+.btn-outline-primary:hover { background-color: #005DB5; border-color: #005DB5; color: #fff; }
+.bg-primary            { background-color: #005DB5 !important; }
+.text-primary          { color: #005DB5 !important; }
+.border-primary        { border-color: #005DB5 !important; }
+.navbar-dark.bg-primary { background-color: #005DB5 !important; }
+.badge.bg-primary      { background-color: #005DB5 !important; }
+.list-group-item-primary { background-color: #cce0f5; border-color: #005DB5; }
+a                      { color: #005DB5; }
+a:hover                { color: #00489c; }
+
+/* Nav pills */
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link { background-color: #005DB5; }
+
+/* Alert amb color institucional UIB (blau diluït) */
+.alert-uib {
+  background-color: #e0edf8;
+  border-color: #a8c8ea;
+  color: #003870;
+}
+.alert-uib a             { color: #005DB5; font-weight: 500; }
+.alert-uib .text-muted   { color: #4a6580 !important; }
