@@ -1,6 +1,8 @@
 class ROL:
     PROFESSORAT = 'Professorat'
     DIRECCIO = 'Direccio'
+    ALUMNE = 'Alumnat'
+    PTGAS = 'PTGAS'
 
 
 def remove_empty_values(d):

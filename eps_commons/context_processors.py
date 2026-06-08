@@ -19,6 +19,12 @@ def current_rol(request):
     }
 
 
+def site_settings(request):
+    return {
+        'SITE_TITLE': getattr(settings, 'SITE_TITLE', ''),
+    }
+
+
 def impersonation_context(request):
     from .views import _can_impersonate
     if not getattr(settings, 'IMPERSONATION_ENABLED', False):
