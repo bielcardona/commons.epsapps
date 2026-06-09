@@ -14,6 +14,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+ROL_LDAP_GROUP = {
+    'Professorat': 'cn=PDI,ou=grups,dc=uib,dc=es',
+    'PTGAS':       'cn=PAS,ou=grups,dc=uib,dc=es',
+    'Alumnat':     'cn=ALU,ou=grups,dc=uib,dc=es',
+    'Direccio':    'cn=CENEQPDIR_EPSU,ou=grups,dc=uib,dc=es',
+}
+
 
 def _setup_ldap_tls(ldap_lib):
     ldap_lib.set_option(ldap_lib.OPT_X_TLS_REQUIRE_CERT, ldap_lib.OPT_X_TLS_DEMAND)
@@ -61,9 +68,10 @@ def lookup_ldap_user(username):
     return None
 
 
-def search_ldap_records(query_string):
+def search_ldap_records(query_string, rol=None):
     """
     Cerca registres LDAP per cn o uid que continguin query_string.
+    Si rol és un valor vàlid de ROL_LDAP_GROUP, filtra per isMemberOf.
     Retorna llista de {'username', 'common_name'}.
     """
     try:
@@ -75,10 +83,13 @@ def search_ldap_records(query_string):
         _setup_ldap_tls(ldap)
         conn = ldap.initialize(ldap_url)
         conn.simple_bind_s(bind_dn, bind_password)
+        text_filter = f'(|(cn=*{query_string}*)(uid=*{query_string}*))'
+        ldap_group = ROL_LDAP_GROUP.get(rol)
+        ldap_filter = f'(&(isMemberOf={ldap_group}){text_filter})' if ldap_group else text_filter
         result = conn.search_s(
             base_dn,
             ldap.SCOPE_SUBTREE,
-            f'(|(cn=*{query_string}*)(uid=*{query_string}*))',
+            ldap_filter,
             ['uid', 'cn'],
         )
         results = []
