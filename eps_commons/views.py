@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from requests.auth import HTTPBasicAuth
 from requests_oauthlib import OAuth2Session
 
@@ -87,6 +88,19 @@ def _generate_code_challenge(verifier):
     return base64.urlsafe_b64encode(digest).rstrip(b'=').decode('utf-8')
 
 
+def _oauth_redirect_uri(request):
+    # Si l'aplicació és accessible sota diversos dominis (.es/.cat/.eu) que
+    # comparteixen el mateix backend, cal que el redirect_uri correspongui
+    # sempre al domini des d'on s'ha iniciat el login, ja que la sessió
+    # (cookie amb el code_verifier/state) no es pot compartir entre dominis
+    # diferents. OAUTH2_REDIRECT_URI permet fixar-lo explícitament quan
+    # l'app només és accessible sota un únic domini.
+    explicit_uri = getattr(settings, 'OAUTH2_REDIRECT_URI', None)
+    if explicit_uri:
+        return explicit_uri
+    return request.build_absolute_uri(reverse('oauth_callback'))
+
+
 def oauth_login(request):
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     request.session['oauth_next_url'] = next_url
@@ -97,7 +111,7 @@ def oauth_login(request):
 
     oauth = OAuth2Session(
         settings.OAUTH2_CLIENT_ID,
-        redirect_uri=settings.OAUTH2_REDIRECT_URI,
+        redirect_uri=_oauth_redirect_uri(request),
     )
     authorization_url, state = oauth.authorization_url(
         settings.OAUTH2_AUTHORIZATION_URL,
@@ -114,7 +128,7 @@ def oauth_callback(request):
 
     oauth = OAuth2Session(
         settings.OAUTH2_CLIENT_ID,
-        redirect_uri=settings.OAUTH2_REDIRECT_URI,
+        redirect_uri=_oauth_redirect_uri(request),
         state=state,
     )
     token = oauth.fetch_token(
