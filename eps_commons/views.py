@@ -101,6 +101,11 @@ def _oauth_redirect_uri(request):
     return request.build_absolute_uri(reverse('oauth_callback'))
 
 
+def _default_managed_groups():
+    from .utils import ROL
+    return [ROL.PROFESSORAT, ROL.DIRECCIO, ROL.ALUMNE, ROL.PTGAS]
+
+
 def oauth_login(request):
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER', '/')
     request.session['oauth_next_url'] = next_url
@@ -156,6 +161,11 @@ def oauth_callback(request):
         for group_name in group_names:
             group, _ = Group.objects.get_or_create(name=group_name)
             user.groups.add(group)
+        # El hub és l'única font dels rols: es treuen els que ja no envia.
+        # Els grups que no són a OAUTH2_MANAGED_GROUPS són propis de l'app
+        # i no es toquen.
+        managed_groups = getattr(settings, 'OAUTH2_MANAGED_GROUPS', _default_managed_groups())
+        user.groups.remove(*user.groups.filter(name__in=managed_groups).exclude(name__in=group_names))
         login(request, user)
 
     request.session['access_token'] = token['access_token']

@@ -34,3 +34,21 @@ class CurrentUserMiddleware:
         response = self.get_response(request)
         _user.value = None
         return response
+
+
+class CurrentRolMiddleware:
+    """Reinicia el rol de la sessió si l'usuari ja no té aquell grup (p.ex.
+    perquè el hub l'hi ha tret). Ha d'anar després de CurrentUserMiddleware
+    perquè, durant una impersonació, es comprovi l'usuari impersonat."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        current_rol = request.session.get('current_rol')
+        if current_rol and request.user.is_authenticated:
+            groups = request.user.groups
+            if not groups.filter(name=current_rol).exists():
+                first = groups.first()
+                request.session['current_rol'] = first.name if first else None
+        return self.get_response(request)
