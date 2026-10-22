@@ -23,20 +23,32 @@ def swap_rol(request, group_name):
 
 
 def _can_impersonate(user):
+    """Superusuaris (restringits a IMPERSONATION_GROUP si està definit) i
+    membres de qualsevol grup d'IMPERSONATION_ALLOWED_GROUPS."""
+    if user.is_superuser:
+        impersonation_group = getattr(settings, 'IMPERSONATION_GROUP', None)
+        if impersonation_group:
+            return user.groups.filter(name=impersonation_group).exists()
+        return True
+    allowed_groups = getattr(settings, 'IMPERSONATION_ALLOWED_GROUPS', [])
+    return bool(allowed_groups) and user.groups.filter(name__in=allowed_groups).exists()
+
+
+def _impersonable_users(user):
+    """Usuaris que `user` pot impersonar. Qui no és superusuari no pot
+    impersonar superusuaris ni staff, per no poder escalar privilegis."""
+    User = get_user_model()
+    users = User.objects.all()
     if not user.is_superuser:
-        return False
-    impersonation_group = getattr(settings, 'IMPERSONATION_GROUP', None)
-    if impersonation_group:
-        return user.groups.filter(name=impersonation_group).exists()
-    return True
+        users = users.filter(is_superuser=False, is_staff=False)
+    return users
 
 
 @user_passes_test(_can_impersonate)
 def impersonate_list(request):
     if not getattr(settings, 'IMPERSONATION_ENABLED', False):
         raise Http404
-    User = get_user_model()
-    users = User.objects.order_by('last_name', 'first_name', 'username')
+    users = _impersonable_users(request.user).order_by('last_name', 'first_name', 'username')
     return render(request, 'eps_commons/impersonate_list.html', {'users': users})
 
 
@@ -45,8 +57,7 @@ def impersonate_user(request, username):
     if not getattr(settings, 'IMPERSONATION_ENABLED', False):
         raise Http404
     from eps_commons.signals import user_impersonated
-    User = get_user_model()
-    target_user = get_object_or_404(User, username=username)
+    target_user = get_object_or_404(_impersonable_users(request.user), username=username)
     request.session['_impersonator_id'] = request.user.pk
     request.session['_impersonated_user_id'] = target_user.pk
     grups = target_user.groups.all()

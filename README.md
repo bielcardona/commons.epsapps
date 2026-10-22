@@ -24,6 +24,19 @@ MIDDLEWARE = [
 ]
 ```
 
+## Impersonació
+
+Cal `IMPERSONATION_ENABLED = True`. Per defecte només hi poden fer
+impersonate els superusuaris (i, si es defineix `IMPERSONATION_GROUP`, només
+els superusuaris d'aquest grup). `IMPERSONATION_ALLOWED_GROUPS` hi afegeix
+els membres dels grups indicats:
+
+```python
+IMPERSONATION_ALLOWED_GROUPS = ['Direccio']
+```
+
+Qui no és superusuari no pot impersonar superusuaris ni usuaris staff.
+
 ## Tests
 
 ```sh

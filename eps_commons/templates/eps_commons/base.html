@@ -62,6 +62,13 @@
                 </li>
                 {% endif %}
               {% endfor %}
+              {% if can_impersonate and not is_impersonating %}
+              <li>
+                <a class="dropdown-item" href="{% url 'impersonate_list' %}">
+                  <i class="bi bi-person-badge"></i> Impersonar usuari
+                </a>
+              </li>
+              {% endif %}
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="{% url LOGOUT_URL %}">
