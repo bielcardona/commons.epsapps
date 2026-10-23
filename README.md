@@ -37,6 +37,21 @@ IMPERSONATION_ALLOWED_GROUPS = ['Direccio']
 
 Qui no és superusuari no pot impersonar superusuaris ni usuaris staff.
 
+## LDAP
+
+Cal l'extra `ldap` (`uv add 'eps-commons[ldap]'`) i `LDAP_URL`,
+`LDAP_BASE_DN`, `LDAP_BIND_DN` i `LDAP_BIND_PASSWORD` als settings.
+
+- `lookup_ldap_user_by_email(email)`: la persona amb aquest correu exacte
+  (LDAP no admet comodins en l'atribut de correu), o `None` si no n'hi ha
+  cap o n'hi ha més d'una.
+- `search_ldap_candidates(text, group=None)`: les persones el `cn` de les
+  quals conté `text`, opcionalment només les membres d'un grup (nom curt,
+  p.ex. `'CENALU_EPSU'`). Qui crida compara el nom exactament.
+
+Totes dues retornen `username`, `common_name`, `first_name`, `last_name`,
+`email` i `groups` (noms curts), i escapen el text del filtre.
+
 ## Tests
 
 ```sh

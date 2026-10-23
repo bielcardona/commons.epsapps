@@ -139,3 +139,93 @@ def lookup_by_cn(cn_query):
     except Exception as e:
         logger.warning("Error LDAP cercant '%s': %s", cn_query, e)
     return None
+
+
+_PERSON_ATTRS = ['uid', 'cn', 'givenName', 'sn', 'mailAutoReplyMode', 'isMemberOf']
+
+
+def _connect():
+    """Connexió LDAP autenticada, o None si falta configuració."""
+    import ldap
+    ldap_url, base_dn, bind_dn, bind_password = _get_ldap_settings()
+    if not all([ldap_url, base_dn, bind_dn, bind_password]):
+        return None, None
+    _setup_ldap_tls(ldap)
+    conn = ldap.initialize(ldap_url)
+    conn.simple_bind_s(bind_dn, bind_password)
+    return conn, base_dn
+
+
+def _person(entry):
+    """Entrada LDAP -> dict amb `username`, `common_name`, `first_name`,
+    `last_name`, `email` i `groups` (noms curts: 'ALU', 'CENALU_EPSU'...)."""
+    from django.utils.encoding import force_str
+
+    def first(attr):
+        return force_str(entry.get(attr, [b''])[0])
+
+    groups = []
+    for dn in entry.get('isMemberOf', []):
+        rdn = force_str(dn).split(',', 1)[0]
+        if rdn.lower().startswith('cn='):
+            groups.append(rdn[3:])
+    return {
+        'username': first('uid'),
+        'common_name': first('cn'),
+        'first_name': first('givenName'),
+        'last_name': first('sn'),
+        'email': first('mailAutoReplyMode'),
+        'groups': groups,
+    }
+
+
+def _search_people(ldap_filter):
+    import ldap
+    conn, base_dn = _connect()
+    if conn is None:
+        return []
+    result = conn.search_s(base_dn, ldap.SCOPE_SUBTREE, ldap_filter, _PERSON_ATTRS)
+    return [_person(entry) for dn, entry in result if dn is not None]
+
+
+def lookup_ldap_user_by_email(email):
+    """
+    Cerca una persona pel correu exacte (LDAP no admet comodins en aquest
+    atribut). Retorna el dict de `_person`, o None si no n'hi ha cap, n'hi
+    ha més d'una o LDAP falla.
+    """
+    if not email or not email.strip():
+        return None
+    try:
+        import ldap.filter
+        people = _search_people(
+            f'(mailAutoReplyMode={ldap.filter.escape_filter_chars(email.strip())})'
+        )
+    except Exception:
+        logger.warning('Error LDAP cercant per correu')
+        return None
+    if len(people) > 1:
+        logger.warning('Cerca LDAP per correu ambigua (%d resultats)', len(people))
+        return None
+    return people[0] if people else None
+
+
+def search_ldap_candidates(query_string, group=None):
+    """
+    Cerca persones el cn de les quals conté `query_string`; si es dona
+    `group` (nom curt, p.ex. 'CENALU_EPSU'), només els seus membres.
+    Retorna llista de dicts de `_person` (amb `groups`), per comparar-hi el
+    nom exactament i filtrar per grup a qui crida. Llista buida si LDAP falla.
+    """
+    if not query_string or not query_string.strip():
+        return []
+    try:
+        import ldap.filter
+        text_filter = f'(cn=*{ldap.filter.escape_filter_chars(query_string.strip())}*)'
+        if group:
+            group_dn = f'cn={ldap.filter.escape_filter_chars(group)},ou=grups,dc=uib,dc=es'
+            text_filter = f'(&(isMemberOf={group_dn}){text_filter})'
+        return _search_people(text_filter)
+    except Exception:
+        logger.warning('Error LDAP cercant candidats')
+        return []
